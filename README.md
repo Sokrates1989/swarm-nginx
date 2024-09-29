@@ -78,11 +78,14 @@ The following settings allow you to control the cache size and duration in Nginx
 Use the following commands to replace placeholders in the `default.conf` file with real values for cache size and duration.
 
 ```bash
-# Replace the cache size placeholder with your desired value.
+# Cache size.
 sed -i -e 's/NGINX_MAX_CACHE_SIZE_PLACEHOLDER/1g/g' ./nginx_conf/conf.d/default.conf
 
-# Replace the cache duration placeholder with your desired value.
+# Cache duration.
 sed -i -e 's/NGINX_CACHE_DURATION_PLACEHOLDER/30m/g' ./nginx_conf/conf.d/default.conf
+
+# Index type (index.html|index.php|...).
+sed -i -e 's/NGINX_INDEX_PLACEHOLDER/index.html/g' ./nginx_conf/conf.d/default.conf
 ```
 
 

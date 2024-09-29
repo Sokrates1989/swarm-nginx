@@ -1,70 +1,68 @@
-fastcgi_cache_path /var/cache/nginx levels=1:2 keys_zone=wp_cache:20m max_size=NGINX_MAX_CACHE_SIZE_PLACEHOLDER inactive=NGINX_CACHE_DURATION_PLACEHOLDER use_temp_path=off;
-fastcgi_cache_key "$scheme$request_method$host$request_uri";
+# Define a cache path for static content caching
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=default_cache:20m max_size=NGINX_MAX_CACHE_SIZE_PLACEHOLDER inactive=NGINX_CACHE_DURATION_PLACEHOLDER use_temp_path=off;
 
 server {
     listen 80 default_server;
     server_name _;
 
+    # Set the root directory where your static files are located
     root /var/www/html;
-    index index.php;
+    index NGINX_INDEX_PLACEHOLDER;
 
+    # Limit the maximum size of the body of a client request
     client_max_body_size 12m;
 
-    set $skip_cache 0;
-
-    # POST requests and URLs with a query string should always go to PHP
-    if ($request_method = POST) {
-        set $skip_cache 1;
-    }
-    if ($query_string != "") {
-        set $skip_cache 1;
+    # MIME types for .vcf (vCard) files
+    types {
+        text/vcard vcf;
     }
 
-    # Don't cache URIs containing the following segments
-    if ($request_uri ~* "/wp-admin/|/xmlrpc.php|wp-.*.php|/feed/|index.php|sitemap(_index)?.xml") {
-        set $skip_cache 1;
-    }
-
-    # Don't use the cache for logged-in users or recent commenters
-    if ($http_cookie ~* "comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_no_cache|wordpress_logged_in") {
-        set $skip_cache 1;
-    }
-
+    # Default location block for handling regular requests
     location / {
-        try_files $uri $uri/ /index.php?$args;
+        try_files $uri $uri/ =404;  # Try to serve the file or return a 404
     }
 
-    location ~ \.php$ {
-        try_files $uri =404;
-        fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_pass wordpress:9000;   # This is the wordpress service name
-        fastcgi_index index.php;
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_param PATH_INFO $fastcgi_path_info;
-        fastcgi_cache wp_cache;
-        fastcgi_cache_valid 200 302 NGINX_CACHE_DURATION_PLACEHOLDER;  # Cache duration
-        fastcgi_cache_valid 404      1m;
-        fastcgi_read_timeout 120s;  # Increase FastCGI read timeout
-        fastcgi_cache_bypass $skip_cache;
-        fastcgi_no_cache $skip_cache;
-        fastcgi_cache_use_stale error timeout invalid_header http_500 http_503;
-        fastcgi_ignore_headers Cache-Control Expires Set-Cookie;
-        fastcgi_cache_background_update on;
-        fastcgi_cache_lock on;
-        fastcgi_cache_min_uses 1;
+    # Cache static files (images, JS, CSS, etc.) for a specified time
+    location ~* ^.+\.(jpg|jpeg|gif|png|ico|css|js|woff|woff2|ttf|svg|vcf|eot|otf|mp4|mp3)$ {
+        expires 7d;  # Cache static files for 7 days
+        add_header Cache-Control "public, no-transform";  # Set Cache-Control headers
+        try_files $uri $uri/ =404;  # Serve the file or return a 404
     }
 
+    # Caching logic for other dynamic content
+    location /dynamic-content/ {
+        proxy_cache default_cache;
+        proxy_cache_valid 200 302 NGINX_CACHE_DURATION_PLACEHOLDER;  # Cache success responses for 10 minutes
+        proxy_cache_valid 404 1m;  # Cache 404 errors for 1 minute
+        add_header X-Cache-Status $upstream_cache_status;  # Add header to indicate cache status
+        proxy_pass http://backend;  # Replace 'backend' with your dynamic content server if needed
+    }
+
+    # Allow purging cache content manually via the /purge/ URL
     location ~ /purge(/.*) {
-        allow 10.0.0.0/8;
-        deny  all;
-        fastcgi_cache_purge wp_cache "$scheme$request_method$host$1";
+        allow 127.0.0.1;  # Allow from localhost (can be replaced with your network if needed)
+        deny all;  # Deny all other access
+        proxy_cache_purge default_cache "$scheme$request_method$host$1";  # Purge matching cache
     }
 
-    location ~* ^.+\.(ogg|ogv|svg|svgz|eot|otf|woff|mp3|mp4|ttf|rss|atom|jpg|jpeg|gif|png|ico|zip|tgz|gz|rar|bz2|doc|xls|exe|ppt|tar|mid|midi|wav|bmp|rtf)$ {
-        expires 7d; # Cache static files for 7 days
-    }
-
+    # Access control for sensitive files and directories
     location = /robots.txt { access_log off; log_not_found off; }
     location ~ /\. { deny all; access_log off; log_not_found off; }
+
+    # Log formats
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+    error_log /var/log/nginx/error.log warn;
+
+    # Cache settings and timeouts
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    gzip on;  # Enable Gzip compression for faster load times
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 }
+
