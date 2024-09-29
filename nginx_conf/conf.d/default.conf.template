@@ -29,40 +29,13 @@ server {
         try_files $uri $uri/ =404;  # Serve the file or return a 404
     }
 
-    # Caching logic for other dynamic content
-    location /dynamic-content/ {
-        proxy_cache default_cache;
-        proxy_cache_valid 200 302 NGINX_CACHE_DURATION_PLACEHOLDER;  # Cache success responses for 10 minutes
-        proxy_cache_valid 404 1m;  # Cache 404 errors for 1 minute
-        add_header X-Cache-Status $upstream_cache_status;  # Add header to indicate cache status
-        proxy_pass http://backend;  # Replace 'backend' with your dynamic content server if needed
-    }
-
-    # Allow purging cache content manually via the /purge/ URL
-    location ~ /purge(/.*) {
-        allow 127.0.0.1;  # Allow from localhost (can be replaced with your network if needed)
-        deny all;  # Deny all other access
-        proxy_cache_purge default_cache "$scheme$request_method$host$1";  # Purge matching cache
-    }
-
     # Access control for sensitive files and directories
     location = /robots.txt { access_log off; log_not_found off; }
     location ~ /\. { deny all; access_log off; log_not_found off; }
 
-    # Log formats
-    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent" "$http_x_forwarded_for"';
-
-    access_log /var/log/nginx/access.log main;
-    error_log /var/log/nginx/error.log warn;
-
-    # Cache settings and timeouts
+    # Caching timeouts
     sendfile on;
     tcp_nopush on;
     tcp_nodelay on;
     keepalive_timeout 65;
-    gzip on;  # Enable Gzip compression for faster load times
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 }
-
