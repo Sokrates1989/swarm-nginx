@@ -1,0 +1,24 @@
+# env files
+*.env
+
+# config-stack.yml
+config-stack.yml
+
+# default.conf.
+nginx_conf\conf.d\default.conf
+
+# swap files
+*.swp
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# Ignore content of nginx_cache.
+nginx_cache/*
+# but keep folder structure itself, by keeping only the .gitkeep file within.
+!nginx_cache/.gitkeep
+
+# Ignore content of www_root.
+www_root/*
+# but keep folder structure itself, by keeping only the .gitkeep file within.
+!www_root/.gitkeep
