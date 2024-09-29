@@ -6,7 +6,7 @@ server {
     server_name _;
 
     # Set the root directory where your static files are located
-    root /var/www/html;
+    root /usr/share/nginx/html;
     index NGINX_INDEX_PLACEHOLDER;
 
     # Limit the maximum size of the body of a client request
