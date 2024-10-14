@@ -12,9 +12,13 @@ server {
     # Limit the maximum size of the body of a client request
     client_max_body_size 12m;
 
-    # MIME types for .vcf (vCard) files
+    # MIME types definition / to correctly serve files the way they are meant to.
     types {
-        text/vcard vcf;
+        text/css                css;               # Serve .css with correct MIME
+        application/javascript  js;                # Serve .js with correct MIME
+        application/octet-stream bin;              # Example for binary files
+        text/vcard              vcf;               # .vcf support
+        text/html               html;              # Serve .html files
     }
 
     # Default location block for handling regular requests
