@@ -152,7 +152,15 @@ vi .env
 Use Docker Compose to deploy your stack to Docker Swarm:
 
 ```bash
-docker stack deploy -c <(docker-compose -f config-stack.yml config) <STACK_NAME>
+set -a
+. ./.env
+set +a
+
+# Verify that rendered paths, hostnames, labels, and stack-specific names come from this repository's .env.
+docker-compose --env-file .env -f config-stack.yml config
+
+# Deploy only after the rendered config is correct.
+docker stack deploy -c <(docker-compose --env-file .env -f config-stack.yml config) "$STACK_NAME"
 ```
 
 
